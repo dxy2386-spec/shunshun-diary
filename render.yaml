@@ -3,7 +3,6 @@ services:
     name: shunshun-diary
     runtime: node
     plan: free
-    region: singapore
     buildCommand: npm install --omit=dev --no-audit --no-fund
     startCommand: node server.mjs --public --trust-proxy
     healthCheckPath: /api/health
@@ -12,6 +11,4 @@ services:
       - key: NODE_VERSION
         value: "24"
       - key: DATABASE_URL
-        sync: false
-      - key: AI_API_KEY
         sync: false
