@@ -2,6 +2,15 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { createDatabase } from './db.mjs';
 
+function usernameFor(user) {
+  if (user.username) return user.username;
+  const local = String(user.email || '')
+    .split('@')[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '');
+  return local.length >= 3 ? local.slice(0, 20) : `user${user.id}`;
+}
+
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
   console.error('请在 .env 中设置 DATABASE_URL（Neon PostgreSQL 连接字符串）后再运行。');
@@ -27,11 +36,24 @@ try {
   await client.query('BEGIN');
 
   const users = source.prepare('SELECT * FROM users ORDER BY id').all();
+  let adminAssigned = false;
   for (const user of users) {
+    const username = usernameFor(user);
+    const isAdmin = Boolean(user.is_admin) || (!adminAssigned && user.email !== 'demo@shunshun.app');
+    if (isAdmin) adminAssigned = true;
     await client.query(
-      `INSERT INTO users (id, email, nickname, password_hash, created_at, consent_at)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [user.id, user.email, user.nickname, user.password_hash, user.created_at, user.consent_at],
+      `INSERT INTO users (id, email, username, nickname, password_hash, created_at, consent_at, is_admin)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        user.id,
+        user.email,
+        username,
+        user.nickname,
+        user.password_hash,
+        user.created_at,
+        user.consent_at,
+        isAdmin,
+      ],
     );
   }
 

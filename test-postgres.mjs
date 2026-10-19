@@ -14,6 +14,7 @@ assert.equal(await db.ping(), true);
 
 const user = await db.createUser({
   email: 'pg-test@example.com',
+  username: 'pg_test',
   nickname: 'PG 测试',
   passwordHash: 'hash',
   createdAt: new Date().toISOString(),
@@ -28,7 +29,7 @@ await db.createSession({
   createdAt: new Date().toISOString(),
 });
 const auth = await db.findAuthSession('token-hash');
-assert.equal(auth.email, 'pg-test@example.com');
+assert.equal(auth.username, 'pg_test');
 
 const now = new Date().toISOString();
 const record = await db.createRecord({
@@ -76,6 +77,21 @@ assert.ok(message.id);
 assert.equal((await db.listMessages(user.id)).length, 1);
 await db.clearMessages(user.id);
 assert.equal((await db.listMessages(user.id)).length, 0);
+
+assert.equal(await db.countAdmins(), 0);
+await db.setAdmin(user.id, true);
+assert.equal(await db.countAdmins(), 1);
+const overview = await db.adminOverview();
+assert.equal(overview.users.length, 1);
+assert.equal(overview.users[0].is_admin, true);
+await db.addAdminAction({
+  adminId: user.id,
+  targetUserId: user.id,
+  action: 'test_action',
+  details: '测试审计',
+  createdAt: new Date().toISOString(),
+});
+assert.equal((await db.adminOverview()).actions.length, 1);
 
 await db.deleteRecord(record.id, user.id);
 assert.equal((await db.listRecords(user.id)).length, 0);

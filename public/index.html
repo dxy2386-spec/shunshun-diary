@@ -136,10 +136,10 @@
 
           <form id="login-form" class="auth-form" novalidate>
             <label class="field">
-              <span class="field-label">邮箱</span>
+              <span class="field-label">账号</span>
               <span class="input-wrap">
-                <svg class="icon"><use href="#i-mail"></use></svg>
-                <input name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+                <svg class="icon"><use href="#i-user"></use></svg>
+                <input name="username" type="text" autocomplete="username" placeholder="输入账号" required />
               </span>
             </label>
             <label class="field">
@@ -162,10 +162,10 @@
               </span>
             </label>
             <label class="field">
-              <span class="field-label">邮箱</span>
+              <span class="field-label">账号</span>
               <span class="input-wrap">
-                <svg class="icon"><use href="#i-mail"></use></svg>
-                <input name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+                <svg class="icon"><use href="#i-user"></use></svg>
+                <input name="username" type="text" autocomplete="username" minlength="3" maxlength="24" placeholder="3–24 位字母、数字或下划线" required />
               </span>
             </label>
             <label class="field">
@@ -186,7 +186,7 @@
           <div class="auth-divider" id="auth-divider"><span>或者</span></div>
           <button id="demo-login" class="btn btn-ghost btn-wide" type="button">
             用体验账号看看
-            <span class="demo-hint">demo@shunshun.app</span>
+            <span class="demo-hint">demo</span>
           </button>
           <p class="auth-privacy">
             <svg class="icon"><use href="#i-shield"></use></svg>
@@ -343,7 +343,7 @@
           <div class="profile-avatar" id="profile-avatar"></div>
           <div class="profile-info">
             <h2 id="profile-name"></h2>
-            <p id="profile-email"></p>
+            <p id="profile-username"></p>
             <span id="profile-since"></span>
           </div>
           <button class="icon-btn" type="button" data-view-link="history" aria-label="查看趋势">
@@ -354,6 +354,11 @@
         <div class="profile-stats" id="profile-stats"></div>
 
         <section class="settings-card">
+          <button type="button" id="admin-entry" class="setting-row" hidden>
+            <span class="setting-icon"><svg class="icon"><use href="#i-shield"></use></svg></span>
+            <span class="setting-copy"><strong>管理员后台</strong><small>用户、记录与角色管理</small></span>
+            <svg class="icon chevron"><use href="#i-chevron"></use></svg>
+          </button>
           <button type="button" id="export-btn" class="setting-row">
             <span class="setting-icon"><svg class="icon"><use href="#i-download"></use></svg></span>
             <span class="setting-copy"><strong>导出我的记录</strong><small>CSV 格式，可用 Excel 打开</small></span>
@@ -391,6 +396,24 @@
 
         <button id="delete-account-btn" class="danger-link" type="button">删除账号与全部数据</button>
         <p class="version">顺顺日记 v1.0 · 认真记录，轻松生活</p>
+      </section>
+
+      <section id="view-admin" class="view" data-view="admin" hidden>
+        <div class="admin-topbar">
+          <button class="text-btn" type="button" data-view-link="me">← 返回我的</button>
+          <button class="text-btn" type="button" id="admin-refresh">刷新</button>
+        </div>
+        <div class="greeting">
+          <p class="eyebrow">ADMIN CONSOLE</p>
+          <h1 class="page-title">管理后台</h1>
+        </div>
+        <p class="admin-warning">这里的操作会直接修改线上数据，并记录审计日志。健康记录属于敏感信息，请只做必要的管理。</p>
+        <div class="stat-grid" id="admin-stats"></div>
+        <div id="admin-users" class="admin-users"></div>
+        <section class="section">
+          <div class="section-head compact"><h2>最近操作</h2></div>
+          <div id="admin-actions" class="admin-actions"></div>
+        </section>
       </section>
 
       <nav class="bottom-nav" aria-label="主导航">

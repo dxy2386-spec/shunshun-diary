@@ -4,7 +4,8 @@
 
 ## 已经实现的功能
 
-- **账号系统**：邮箱注册、登录、退出，密码使用 scrypt 加盐哈希存储。
+- **账号系统**：账号名注册、登录、退出，密码使用 scrypt 加盐哈希存储；不再要求邮箱。
+- **管理员后台**：管理员可以查看用户、查看/删除记录、授予或取消管理员、删除用户，所有管理操作写入审计日志。
 - **排便记录**：时间、Bristol 1–7 型、颜色、量、排便感受、备注；支持编辑和删除。
 - **今日概览**：今日次数、最近 7 天柱状图、近 7 天次数、日均次数、连续记录天数。
 - **趋势回看**：近 14 天柱状图、形态分布、累计记录、按天分组的记录明细，支持 7 天 / 30 天 / 全部筛选。
@@ -44,10 +45,10 @@ npm start
 
 局域网地址使用 HTTP，适合在家里的可信 Wi-Fi 下测试；不要把 5173 端口直接暴露到公网。公网使用请按下面的 HTTPS 部署方式。
 
-体验账号：
+体验账号（仅本地/局域网的演示模式可用）：
 
 ```text
-邮箱：demo@shunshun.app
+账号：demo
 密码：shunshun123
 ```
 
@@ -114,7 +115,13 @@ PUBLIC_MODE=1
 TRUST_PROXY=1
 ```
 
-这会隐藏体验账号入口、关闭演示账号登录，并把注册限制为每个客户端 IP 每小时最多 8 次。`TRUST_PROXY=1` 用于 Cloudflare Tunnel 或反向代理后面读取 `CF-Connecting-IP` / `X-Forwarded-For` 和 HTTPS 协议；不要在直接暴露的局域网服务上随意开启，以免客户端伪造来源 IP。
+这会隐藏体验账号入口、关闭演示账号登录，并把注册限制为每个客户端 IP 每小时最多 8 次。账号名需为 3–24 位字母、数字或下划线；`TRUST_PROXY=1` 用于 Cloudflare Tunnel 或反向代理后面读取 `CF-Connecting-IP` / `X-Forwarded-For` 和 HTTPS 协议；不要在直接暴露的局域网服务上随意开启，以免客户端伪造来源 IP。
+
+已有用户会自动从旧邮箱的 `@` 前部分生成账号名。数据库里保留的 `email` 列只用于兼容旧数据，网页和登录接口不再使用邮箱。首个非 `demo` 用户会自动获得管理员权限；也可以在环境变量里设置：
+
+```env
+ADMIN_USERNAME=your_admin_username
+```
 
 也可以不依赖环境变量，直接运行：
 
@@ -151,6 +158,8 @@ Render 免费 Web Service 的本地磁盘是临时的，不能直接使用 SQLit
 3. 把项目推送到 GitHub。
 4. 在 Render 选择 **Web Services → New Web Service**，连接该仓库，选择 Free 实例，构建命令 `npm install --omit=dev --no-audit --no-fund`，启动命令 `node server.mjs --public --trust-proxy`。
 5. 在 Render 环境变量里设置 `NODE_VERSION=24` 和 `DATABASE_URL`；健康检查路径填 `/api/health`。
+
+Render 首次启动会自动补上 `username`、`is_admin` 和管理员审计表。当前 Neon 数据已经迁移，已有账号无需重新导入。
 
 也可以让 Render 读取仓库里的 `render.yaml` 蓝图，但 `DATABASE_URL` 会要求手动填写，不能提交到 Git。
 

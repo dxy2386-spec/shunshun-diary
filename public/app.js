@@ -14,6 +14,9 @@ const state = {
   historyFilter: '7',
   editingId: null,
   chatBusy: false,
+  adminData: null,
+  adminSelectedId: null,
+  adminRecords: [],
   form: { bristol: 4, color: 'brown', amount: 'medium', ease: 'normal' },
   authMode: 'login',
 };
@@ -241,7 +244,7 @@ function stats() {
 function renderToday() {
   const s = stats();
   $('#greeting-text').textContent = `${greeting()}，${state.user?.nickname || '朋友'}`;
-  $('#header-avatar').textContent = (state.user?.nickname || state.user?.email || '顺').trim().charAt(0).toUpperCase();
+  $('#header-avatar').textContent = (state.user?.nickname || state.user?.username || '顺').trim().charAt(0).toUpperCase();
   $('#today-pill').textContent = `${fmtShortDate()} · ${WEEKDAYS[new Date().getDay()]}`;
   $('#hero-date').textContent = `${fmtShortDate()} · ${WEEKDAYS[new Date().getDay()]}`;
   $('#today-count').textContent = String(s.todayCount);
@@ -454,11 +457,11 @@ function renderMe() {
   const s = stats();
   const user = state.user;
   if (!user) return;
-  const initial = (user.nickname || user.email || '顺').trim().charAt(0).toUpperCase();
+  const initial = (user.nickname || user.username || '顺').trim().charAt(0).toUpperCase();
   $('#profile-avatar').textContent = initial;
   $('#header-avatar').textContent = initial;
   $('#profile-name').textContent = user.nickname;
-  $('#profile-email').textContent = user.email;
+  $('#profile-username').textContent = `@${user.username}`;
   const since = new Date(user.createdAt);
   $('#profile-since').textContent = `${since.getFullYear()} 年 ${since.getMonth() + 1} 月加入`;
   $('#profile-stats').innerHTML = `
@@ -466,6 +469,7 @@ function renderMe() {
     <div class="profile-stat"><strong>${s.activeDays}</strong><span>记录天数</span></div>
     <div class="profile-stat"><strong>${s.streak}</strong><span>连续天数</span></div>
   `;
+  $('#admin-entry').hidden = !user.isAdmin;
   renderLanShare();
 }
 
@@ -483,19 +487,129 @@ function renderLanShare() {
   $('#copy-lan-btn').disabled = !url;
 }
 
+/* ---------- admin ---------- */
+
+async function renderAdmin() {
+  if (!state.user?.isAdmin) {
+    setView('me');
+    return;
+  }
+  $('#admin-users').innerHTML = '<div class="admin-loading">正在加载用户…</div>';
+  try {
+    const data = await api('/api/admin/overview');
+    state.adminData = data;
+    if (state.adminSelectedId && !data.users.some((u) => u.id === state.adminSelectedId)) {
+      state.adminSelectedId = null;
+      state.adminRecords = [];
+    }
+    renderAdminContent();
+  } catch (err) {
+    $('#admin-users').innerHTML = `<div class="admin-empty">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderAdminContent() {
+  const data = state.adminData;
+  if (!data) return;
+  const totals = data.totals || {};
+  $('#admin-stats').innerHTML = `
+    <div class="stat-card"><p class="stat-label">注册用户</p><div class="stat-value">${totals.users || 0}<small>人</small></div><p class="stat-sub">含管理员</p></div>
+    <div class="stat-card accent"><p class="stat-label">总记录</p><div class="stat-value">${totals.records || 0}<small>条</small></div><p class="stat-sub">所有用户合计</p></div>
+    <div class="stat-card"><p class="stat-label">管理员</p><div class="stat-value">${totals.admins || 0}<small>人</small></div><p class="stat-sub">拥有后台权限</p></div>
+  `;
+  const users = data.users || [];
+  $('#admin-users').innerHTML = users.length
+    ? users
+        .map((user) => {
+          const initial = (user.nickname || user.username || '?').trim().charAt(0).toUpperCase();
+          const selected = state.adminSelectedId === user.id;
+          const joined = user.created_at ? String(user.created_at).slice(0, 10) : '';
+          return `<article class="admin-user-card">
+            <div class="admin-user-head">
+              <div class="admin-user-avatar">${escapeHtml(initial)}</div>
+              <div class="admin-user-info">
+                <strong>@${escapeHtml(user.username || '未命名')}</strong>
+                <small>${escapeHtml(user.nickname || '')} · ${user.record_count || 0} 条记录 · ${joined}</small>
+              </div>
+              ${user.is_admin ? '<span class="admin-badge">管理员</span>' : ''}
+            </div>
+            <div class="admin-user-actions">
+              <button class="admin-action-btn" type="button" data-admin-records="${user.id}">${selected ? '收起记录' : '查看记录'}</button>
+              ${
+                user.id === state.user.id
+                  ? '<span class="admin-action-btn">当前账号</span>'
+                  : `<button class="admin-action-btn" type="button" data-admin-toggle="${user.id}" data-admin-next="${user.is_admin ? 'false' : 'true'}">${user.is_admin ? '取消管理员' : '设为管理员'}</button>
+                     <button class="admin-action-btn danger" type="button" data-admin-delete="${user.id}">删除用户</button>`
+              }
+            </div>
+            ${selected ? `<div class="admin-records">${adminRecordsHtml()}</div>` : ''}
+          </article>`;
+        })
+        .join('')
+    : '<div class="admin-empty">还没有用户</div>';
+
+  const actions = data.actions || [];
+  $('#admin-actions').innerHTML = actions.length
+    ? actions
+        .map(
+          (action) => `<div class="admin-action-row">
+            <div class="admin-action-copy"><strong>@${escapeHtml(action.admin_username || 'admin')}</strong> ${escapeHtml(action.details || action.action)}</div>
+            <time>${action.created_at ? fmtTime(action.created_at) : ''}</time>
+          </div>`,
+        )
+        .join('')
+    : '<div class="admin-empty">还没有管理操作</div>';
+}
+
+function adminRecordsHtml() {
+  if (!state.adminRecords.length) return '<div class="admin-empty">这个用户还没有记录</div>';
+  return state.adminRecords
+    .map((record) => {
+      const color = COLORS[record.color] || COLORS.brown;
+      return `<div class="admin-record-row">
+        <div class="admin-record-main">
+          <strong>${record.localDate} ${fmtTime(record.occurredAt)} · ${record.bristol} 型 ${escapeHtml(BRISTOL[record.bristol]?.name || '')}</strong>
+          <span>${escapeHtml(color.full)} · ${escapeHtml(AMOUNTS[record.amount] || record.amount)} · ${escapeHtml(EASES[record.ease] || record.ease)}${record.notes ? ` · ${escapeHtml(record.notes)}` : ''}</span>
+        </div>
+        <button class="admin-record-delete" type="button" data-admin-delete-record="${record.id}">删除</button>
+      </div>`;
+    })
+    .join('');
+}
+
+async function loadAdminRecords(userId) {
+  if (state.adminSelectedId === userId) {
+    state.adminSelectedId = null;
+    state.adminRecords = [];
+    renderAdminContent();
+    return;
+  }
+  state.adminSelectedId = userId;
+  state.adminRecords = [];
+  renderAdminContent();
+  try {
+    const data = await api(`/api/admin/users/${userId}/records`);
+    state.adminRecords = data.records || [];
+    renderAdminContent();
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
 /* ---------- view routing ---------- */
 
 function setView(view, options = {}) {
-  const allowed = ['today', 'history', 'assistant', 'me'];
+  const allowed = ['today', 'history', 'assistant', 'me', 'admin'];
   if (!allowed.includes(view)) view = 'today';
+  if (view === 'admin' && !state.user?.isAdmin) view = 'me';
   state.view = view;
   if (state.user) {
-    $('#header-avatar').textContent = (state.user.nickname || state.user.email || '顺').trim().charAt(0).toUpperCase();
+    $('#header-avatar').textContent = (state.user.nickname || state.user.username || '顺').trim().charAt(0).toUpperCase();
   }
   $$('.view').forEach((el) => {
     el.hidden = el.dataset.view !== view;
   });
-  $$('.nav-item').forEach((el) => el.classList.toggle('is-active', el.dataset.nav === view));
+  $$('.nav-item').forEach((el) => el.classList.toggle('is-active', el.dataset.nav === (view === 'admin' ? 'me' : view)));
   if (view === 'today') renderToday();
   if (view === 'history') renderHistory();
   if (view === 'assistant') {
@@ -503,6 +617,7 @@ function setView(view, options = {}) {
     renderChat();
   }
   if (view === 'me') renderMe();
+  if (view === 'admin') renderAdmin();
   if (options.scroll !== false) window.scrollTo(0, 0);
 }
 
@@ -795,7 +910,7 @@ async function demoLogin() {
   const btn = $('#demo-login');
   btn.disabled = true;
   try {
-    await api('/api/auth/login', { method: 'POST', body: { email: 'demo@shunshun.app', password: 'shunshun123' } });
+    await api('/api/auth/login', { method: 'POST', body: { username: 'demo', password: 'shunshun123' } });
     await loadAll();
     showApp();
     showToast('已进入体验账号');
@@ -856,9 +971,76 @@ function bindEvents() {
     document.body.style.overflow = '';
   });
 
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', async (e) => {
     if (e.target.closest('[data-open-record]')) {
       openRecord();
+      return;
+    }
+    const adminRecords = e.target.closest('[data-admin-records]');
+    if (adminRecords) {
+      await loadAdminRecords(Number(adminRecords.dataset.adminRecords));
+      return;
+    }
+    const adminToggle = e.target.closest('[data-admin-toggle]');
+    if (adminToggle) {
+      const userId = Number(adminToggle.dataset.adminToggle);
+      const next = adminToggle.dataset.adminNext === 'true';
+      const user = state.adminData?.users.find((item) => item.id === userId);
+      const result = await confirmAction({
+        title: next ? '授予管理员权限？' : '取消管理员权限？',
+        text: `${next ? '将' : '取消'} @${user?.username || userId} 的管理员权限，并记录这次操作。`,
+        confirmText: next ? '授予' : '取消',
+      });
+      if (!result.ok) return;
+      try {
+        await api(`/api/admin/users/${userId}`, { method: 'PATCH', body: { isAdmin: next } });
+        showToast(next ? '已授予管理员权限' : '已取消管理员权限');
+        await renderAdmin();
+      } catch (err) {
+        showToast(err.message);
+      }
+      return;
+    }
+    const adminDelete = e.target.closest('[data-admin-delete]');
+    if (adminDelete) {
+      const userId = Number(adminDelete.dataset.adminDelete);
+      const user = state.adminData?.users.find((item) => item.id === userId);
+      const result = await confirmAction({
+        title: '删除这个用户？',
+        text: `@${user?.username || userId} 的账号、记录和助手对话都会被永久删除。`,
+        confirmText: '永久删除',
+      });
+      if (!result.ok) return;
+      try {
+        await api(`/api/admin/users/${userId}`, { method: 'DELETE' });
+        if (state.adminSelectedId === userId) {
+          state.adminSelectedId = null;
+          state.adminRecords = [];
+        }
+        showToast('用户已删除');
+        await renderAdmin();
+      } catch (err) {
+        showToast(err.message);
+      }
+      return;
+    }
+    const adminDeleteRecord = e.target.closest('[data-admin-delete-record]');
+    if (adminDeleteRecord) {
+      const recordId = Number(adminDeleteRecord.dataset.adminDeleteRecord);
+      const result = await confirmAction({
+        title: '删除这条记录？',
+        text: '这条健康记录会被永久删除，操作会写入审计日志。',
+        confirmText: '删除',
+      });
+      if (!result.ok) return;
+      try {
+        await api(`/api/admin/records/${recordId}`, { method: 'DELETE' });
+        state.adminRecords = state.adminRecords.filter((record) => record.id !== recordId);
+        showToast('记录已删除');
+        await renderAdmin();
+      } catch (err) {
+        showToast(err.message);
+      }
       return;
     }
     const bristol = e.target.closest('[data-bristol]');
@@ -918,6 +1100,10 @@ function bindEvents() {
   $('#header-avatar').addEventListener('click', () => {
     location.hash = '#/me';
   });
+  $('#admin-entry').addEventListener('click', () => {
+    location.hash = '#/admin';
+  });
+  $('#admin-refresh').addEventListener('click', () => renderAdmin());
 
   window.addEventListener('hashchange', () => {
     if (!state.user) return;

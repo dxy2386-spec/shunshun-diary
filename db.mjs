@@ -8,10 +8,12 @@ const SQLITE_SCHEMA = `
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL UNIQUE,
+    username TEXT,
     nickname TEXT NOT NULL,
     password_hash TEXT NOT NULL,
     created_at TEXT NOT NULL,
-    consent_at TEXT
+    consent_at TEXT,
+    is_admin INTEGER NOT NULL DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS sessions (
@@ -45,16 +47,28 @@ const SQLITE_SCHEMA = `
     created_at TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id, id);
+
+  CREATE TABLE IF NOT EXISTS admin_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    admin_id INTEGER NOT NULL,
+    target_user_id INTEGER,
+    action TEXT NOT NULL,
+    details TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_admin_actions_created ON admin_actions(id);
 `;
 
 const POSTGRES_SCHEMA = `
   CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
+    username TEXT,
     nickname TEXT NOT NULL,
     password_hash TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
-    consent_at TIMESTAMPTZ
+    consent_at TIMESTAMPTZ,
+    is_admin BOOLEAN NOT NULL DEFAULT FALSE
   );
 
   CREATE TABLE IF NOT EXISTS sessions (
@@ -89,7 +103,39 @@ const POSTGRES_SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id, id);
   ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_at TIMESTAMPTZ;
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
+  ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
+
+  CREATE TABLE IF NOT EXISTS admin_actions (
+    id SERIAL PRIMARY KEY,
+    admin_id INTEGER NOT NULL,
+    target_user_id INTEGER,
+    action TEXT NOT NULL,
+    details TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_admin_actions_created ON admin_actions(id);
 `;
+
+function usernameBase(email, id) {
+  const local = String(email || '')
+    .split('@')[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '');
+  const base = local.length >= 3 ? local : `user${id}`;
+  return base.slice(0, 20);
+}
+
+function uniqueUsername(base, used) {
+  let candidate = base;
+  let suffix = 2;
+  while (used.has(candidate)) {
+    candidate = `${base.slice(0, 21)}${suffix}`;
+    suffix += 1;
+  }
+  used.add(candidate);
+  return candidate;
+}
 
 class SqliteDatabase {
   constructor(filename) {
@@ -99,7 +145,33 @@ class SqliteDatabase {
 
   async init() {
     this.db.exec(SQLITE_SCHEMA);
+    const columns = this.db.prepare('PRAGMA table_info(users)').all().map((column) => column.name);
+    if (!columns.includes('username')) this.db.exec('ALTER TABLE users ADD COLUMN username TEXT');
+    if (!columns.includes('is_admin')) this.db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
+    const users = this.db.prepare('SELECT id, email, username FROM users ORDER BY id').all();
+    const used = new Set(users.map((user) => user.username).filter(Boolean));
+    for (const user of users) {
+      if (user.username) continue;
+      const username = uniqueUsername(usernameBase(user.email, user.id), used);
+      this.db.prepare('UPDATE users SET username = ? WHERE id = ?').run(username, user.id);
+    }
+    this.db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)');
+    await this.ensureAdmin();
     return this;
+  }
+
+  async ensureAdmin() {
+    const admin = this.db.prepare('SELECT id FROM users WHERE is_admin = 1 LIMIT 1').get();
+    if (!admin) {
+      const fallback = this.db
+        .prepare("SELECT id FROM users WHERE username <> 'demo' ORDER BY id LIMIT 1")
+        .get();
+      if (fallback) this.db.prepare('UPDATE users SET is_admin = 1 WHERE id = ?').run(fallback.id);
+    }
+    const adminName = String(process.env.ADMIN_USERNAME || '').trim().toLowerCase();
+    if (adminName) {
+      this.db.prepare('UPDATE users SET is_admin = 1 WHERE username = ?').run(adminName);
+    }
   }
 
   async ping() {
@@ -111,16 +183,20 @@ class SqliteDatabase {
     return this.db.prepare('SELECT * FROM users WHERE email = ?').get(email);
   }
 
+  async findUserByUsername(username) {
+    return this.db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+  }
+
   async findUserById(id) {
     return this.db.prepare('SELECT * FROM users WHERE id = ?').get(id);
   }
 
-  async createUser({ email, nickname, passwordHash, createdAt, consentAt }) {
+  async createUser({ email, username, nickname, passwordHash, createdAt, consentAt, isAdmin = false }) {
     const result = this.db
       .prepare(
-        'INSERT INTO users (email, nickname, password_hash, created_at, consent_at) VALUES (?, ?, ?, ?, ?)',
+        'INSERT INTO users (email, username, nickname, password_hash, created_at, consent_at, is_admin) VALUES (?, ?, ?, ?, ?, ?, ?)',
       )
-      .run(email, nickname, passwordHash, createdAt, consentAt || null);
+      .run(email, username, nickname, passwordHash, createdAt, consentAt || null, isAdmin ? 1 : 0);
     return this.findUserById(Number(result.lastInsertRowid));
   }
 
@@ -141,7 +217,7 @@ class SqliteDatabase {
   async findAuthSession(tokenHash) {
     return this.db
       .prepare(
-        `SELECT u.id, u.email, u.nickname, u.created_at, s.expires_at
+        `SELECT u.id, u.username, u.nickname, u.created_at, u.is_admin, s.expires_at
          FROM sessions s JOIN users u ON u.id = s.user_id
          WHERE s.token_hash = ?`,
       )
@@ -231,6 +307,59 @@ class SqliteDatabase {
     this.db.prepare('DELETE FROM users WHERE id = ?').run(userId);
   }
 
+  async countAdmins() {
+    return Number(this.db.prepare('SELECT COUNT(*) AS n FROM users WHERE is_admin = 1').get().n);
+  }
+
+  async setAdmin(userId, isAdmin) {
+    this.db.prepare('UPDATE users SET is_admin = ? WHERE id = ?').run(isAdmin ? 1 : 0, userId);
+    return this.findUserById(userId);
+  }
+
+  async getRecordById(id) {
+    return this.db.prepare('SELECT * FROM records WHERE id = ?').get(id);
+  }
+
+  async deleteRecordById(id) {
+    this.db.prepare('DELETE FROM records WHERE id = ?').run(id);
+  }
+
+  async addAdminAction({ adminId, targetUserId = null, action, details = '', createdAt }) {
+    const result = this.db
+      .prepare(
+        'INSERT INTO admin_actions (admin_id, target_user_id, action, details, created_at) VALUES (?, ?, ?, ?, ?)',
+      )
+      .run(adminId, targetUserId, action, details, createdAt);
+    return Number(result.lastInsertRowid);
+  }
+
+  async adminOverview() {
+    const users = this.db
+      .prepare(
+        `SELECT u.id, u.username, u.nickname, u.created_at, u.is_admin,
+         (SELECT COUNT(*) FROM records r WHERE r.user_id = u.id) AS record_count
+         FROM users u ORDER BY u.id`,
+      )
+      .all()
+      .map((user) => ({ ...user, is_admin: Boolean(user.is_admin), record_count: Number(user.record_count) }));
+    const actions = this.db
+      .prepare(
+        `SELECT a.id, a.action, a.details, a.created_at, a.target_user_id,
+         u.username AS admin_username
+         FROM admin_actions a LEFT JOIN users u ON u.id = a.admin_id
+         ORDER BY a.id DESC LIMIT 20`,
+      )
+      .all();
+    const totals = this.db
+      .prepare(
+        `SELECT (SELECT COUNT(*) FROM users) AS users,
+         (SELECT COUNT(*) FROM records) AS records,
+         (SELECT COUNT(*) FROM users WHERE is_admin = 1) AS admins`,
+      )
+      .get();
+    return { users, actions, totals };
+  }
+
   async close() {
     this.db.close();
   }
@@ -252,7 +381,32 @@ class PostgresDatabase {
       ssl: isLocal || process.env.PGSSL === 'disable' ? false : { rejectUnauthorized: false },
     });
     await this.pool.query(POSTGRES_SCHEMA);
+    const { rows: users } = await this.pool.query('SELECT id, email, username FROM users ORDER BY id');
+    const used = new Set(users.map((user) => user.username).filter(Boolean));
+    for (const user of users) {
+      if (user.username) continue;
+      const username = uniqueUsername(usernameBase(user.email, user.id), used);
+      await this.pool.query('UPDATE users SET username = $1 WHERE id = $2', [username, user.id]);
+    }
+    await this.pool.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)');
+    await this.ensureAdmin();
     return this;
+  }
+
+  async ensureAdmin() {
+    const { rows: admins } = await this.pool.query('SELECT id FROM users WHERE is_admin = TRUE LIMIT 1');
+    if (!admins.length) {
+      const { rows: fallback } = await this.pool.query(
+        "SELECT id FROM users WHERE username <> 'demo' ORDER BY id LIMIT 1",
+      );
+      if (fallback[0]) {
+        await this.pool.query('UPDATE users SET is_admin = TRUE WHERE id = $1', [fallback[0].id]);
+      }
+    }
+    const adminName = String(process.env.ADMIN_USERNAME || '').trim().toLowerCase();
+    if (adminName) {
+      await this.pool.query('UPDATE users SET is_admin = TRUE WHERE username = $1', [adminName]);
+    }
   }
 
   async query(sql, params = []) {
@@ -269,16 +423,21 @@ class PostgresDatabase {
     return rows[0] || null;
   }
 
+  async findUserByUsername(username) {
+    const { rows } = await this.query('SELECT * FROM users WHERE username = $1', [username]);
+    return rows[0] || null;
+  }
+
   async findUserById(id) {
     const { rows } = await this.query('SELECT * FROM users WHERE id = $1', [id]);
     return rows[0] || null;
   }
 
-  async createUser({ email, nickname, passwordHash, createdAt, consentAt }) {
+  async createUser({ email, username, nickname, passwordHash, createdAt, consentAt, isAdmin = false }) {
     const { rows } = await this.query(
-      `INSERT INTO users (email, nickname, password_hash, created_at, consent_at)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [email, nickname, passwordHash, createdAt, consentAt || null],
+      `INSERT INTO users (email, username, nickname, password_hash, created_at, consent_at, is_admin)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [email, username, nickname, passwordHash, createdAt, consentAt || null, Boolean(isAdmin)],
     );
     return rows[0];
   }
@@ -300,7 +459,7 @@ class PostgresDatabase {
 
   async findAuthSession(tokenHash) {
     const { rows } = await this.query(
-      `SELECT u.id, u.email, u.nickname, u.created_at, s.expires_at
+      `SELECT u.id, u.username, u.nickname, u.created_at, u.is_admin, s.expires_at
        FROM sessions s JOIN users u ON u.id = s.user_id
        WHERE s.token_hash = $1`,
       [tokenHash],
@@ -395,6 +554,63 @@ class PostgresDatabase {
 
   async deleteUser(userId) {
     await this.query('DELETE FROM users WHERE id = $1', [userId]);
+  }
+
+  async countAdmins() {
+    const { rows } = await this.query('SELECT COUNT(*)::int AS n FROM users WHERE is_admin = TRUE');
+    return Number(rows[0].n);
+  }
+
+  async setAdmin(userId, isAdmin) {
+    const { rows } = await this.query('UPDATE users SET is_admin = $1 WHERE id = $2 RETURNING *', [
+      Boolean(isAdmin),
+      userId,
+    ]);
+    return rows[0] || null;
+  }
+
+  async getRecordById(id) {
+    const { rows } = await this.query('SELECT * FROM records WHERE id = $1', [id]);
+    return rows[0] || null;
+  }
+
+  async deleteRecordById(id) {
+    await this.query('DELETE FROM records WHERE id = $1', [id]);
+  }
+
+  async addAdminAction({ adminId, targetUserId = null, action, details = '', createdAt }) {
+    const { rows } = await this.query(
+      `INSERT INTO admin_actions (admin_id, target_user_id, action, details, created_at)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [adminId, targetUserId, action, details, createdAt],
+    );
+    return rows[0].id;
+  }
+
+  async adminOverview() {
+    const { rows: users } = await this.query(
+      'SELECT id, username, nickname, created_at, is_admin FROM users ORDER BY id',
+    );
+    const { rows: counts } = await this.query(
+      'SELECT user_id, COUNT(*)::int AS n FROM records GROUP BY user_id',
+    );
+    const countMap = new Map(counts.map((row) => [row.user_id, Number(row.n)]));
+    const { rows: actions } = await this.query(
+      `SELECT a.id, a.action, a.details, a.created_at, a.target_user_id,
+       u.username AS admin_username
+       FROM admin_actions a LEFT JOIN users u ON u.id = a.admin_id
+       ORDER BY a.id DESC LIMIT 20`,
+    );
+    const { rows: totals } = await this.query(
+      `SELECT (SELECT COUNT(*)::int FROM users) AS users,
+       (SELECT COUNT(*)::int FROM records) AS records,
+       (SELECT COUNT(*)::int FROM users WHERE is_admin = TRUE) AS admins`,
+    );
+    return {
+      users: users.map((user) => ({ ...user, record_count: countMap.get(user.id) || 0 })),
+      actions,
+      totals: totals[0],
+    };
   }
 
   async close() {

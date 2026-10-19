@@ -21,7 +21,7 @@ await db.init();
 const COLORS = new Set(['brown', 'dark_brown', 'yellow', 'green', 'black', 'red', 'pale']);
 const AMOUNTS = new Set(['small', 'medium', 'large']);
 const EASES = new Set(['easy', 'normal', 'strained', 'urgent']);
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const USERNAME_RE = /^[a-zA-Z0-9_]{3,24}$/;
 
 const AI_KEY = process.env.AI_API_KEY || process.env.OPENAI_API_KEY || '';
 const AI_BASE = (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
@@ -176,16 +176,31 @@ async function getAuth(req) {
     await db.deleteSession(hashToken(token));
     return null;
   }
-  return { id: row.id, email: row.email, nickname: row.nickname, created_at: row.created_at };
+  return {
+    id: row.id,
+    username: row.username,
+    nickname: row.nickname,
+    created_at: row.created_at,
+    is_admin: Boolean(row.is_admin),
+  };
 }
 
 function publicUser(user) {
   return {
     id: user.id,
-    email: user.email,
+    username: user.username,
     nickname: user.nickname,
     createdAt: user.created_at,
+    isAdmin: Boolean(user.is_admin),
   };
+}
+
+function requireAdmin(user, res) {
+  if (!user?.is_admin) {
+    sendError(res, 403, '需要管理员权限');
+    return false;
+  }
+  return true;
 }
 
 function checkOrigin(req) {
@@ -676,6 +691,7 @@ async function seedDemo() {
   const createdAt = nowIso();
   const user = await db.createUser({
     email,
+    username: 'demo',
     nickname: '小顺',
     passwordHash: hashPassword('shunshun123'),
     createdAt,
@@ -803,26 +819,32 @@ const server = http.createServer(async (req, res) => {
         if (tooManyRegistrations(ip)) return sendError(res, 429, '注册太频繁了，请稍后再试');
         if (tooManyAttempts(ip)) return sendError(res, 429, '尝试次数过多，请稍后再试');
         const body = await readBody(req);
-        const email = String(body.email || '').trim().toLowerCase();
+        const username = String(body.username || '').trim().toLowerCase();
         const nickname = String(body.nickname || '').trim().slice(0, 24);
         const password = String(body.password || '');
         const consent = body.consent === true || body.consent === 'on' || body.consent === 'true';
-        if (!EMAIL_RE.test(email) || email.length > 120) return sendError(res, 400, '请输入有效的邮箱地址');
+        if (!USERNAME_RE.test(username)) return sendError(res, 400, '账号需为 3–24 位字母、数字或下划线');
         if (nickname.length < 1) return sendError(res, 400, '请输入昵称');
         if (password.length < 8) return sendError(res, 400, '密码至少需要 8 位');
         if (password.length > 128) return sendError(res, 400, '密码过长');
         if (!consent) return sendError(res, 400, '请先同意健康数据说明');
-        if (!DEMO_ENABLED && email === 'demo@shunshun.app') return sendError(res, 403, '体验账号未开放');
-        const exists = await db.findUserByEmail(email);
-        if (exists) return sendError(res, 409, '这个邮箱已经注册过了');
+        if (!DEMO_ENABLED && username === 'demo') return sendError(res, 403, '体验账号未开放');
+        const exists = await db.findUserByUsername(username);
+        if (exists) return sendError(res, 409, '这个账号已经被注册');
         const createdAt = nowIso();
         const user = await db.createUser({
-          email,
+          email: `${username}@users.local`,
+          username,
           nickname,
           passwordHash: hashPassword(password),
           createdAt,
           consentAt: createdAt,
         });
+        const adminName = String(process.env.ADMIN_USERNAME || '').trim().toLowerCase();
+        if (adminName && username === adminName) {
+          await db.setAdmin(user.id, true);
+          user.is_admin = true;
+        }
         await createSession(req, res, user.id);
         return sendJson(res, 201, { user: publicUser(user) });
       }
@@ -831,12 +853,15 @@ const server = http.createServer(async (req, res) => {
         const ip = clientIp(req);
         if (tooManyAttempts(ip)) return sendError(res, 429, '尝试次数过多，请稍后再试');
         const body = await readBody(req);
-        const email = String(body.email || '').trim().toLowerCase();
+        const account = String(body.username || body.email || '').trim().toLowerCase();
         const password = String(body.password || '');
-        if (!DEMO_ENABLED && email === 'demo@shunshun.app') return sendError(res, 403, '体验账号未开放');
-        const user = await db.findUserByEmail(email);
+        let user = await db.findUserByUsername(account);
+        if (!user && account.includes('@')) user = await db.findUserByEmail(account);
+        if (!DEMO_ENABLED && (user?.username === 'demo' || account === 'demo')) {
+          return sendError(res, 403, '体验账号未开放');
+        }
         if (!user || !verifyPassword(password, user.password_hash)) {
-          return sendError(res, 401, '邮箱或密码不正确');
+          return sendError(res, 401, '账号或密码不正确');
         }
         await db.deleteExpiredSessions(user.id, nowIso());
         await createSession(req, res, user.id);
@@ -861,6 +886,75 @@ const server = http.createServer(async (req, res) => {
           aiEnabled: Boolean(AI_KEY),
           lanUrls: lanUrls(),
         });
+      }
+
+      if (pathname === '/api/admin/overview' && method === 'GET') {
+        if (!requireAdmin(user, res)) return;
+        return sendJson(res, 200, { ...(await db.adminOverview()), currentUsername: user.username });
+      }
+
+      const adminUserMatch = pathname.match(/^\/api\/admin\/users\/(\d+)(\/records)?$/);
+      if (adminUserMatch) {
+        if (!requireAdmin(user, res)) return;
+        const targetId = Number(adminUserMatch[1]);
+        const target = await db.findUserById(targetId);
+        if (!target) return sendError(res, 404, '用户不存在');
+        if (adminUserMatch[2] && method === 'GET') {
+          return sendJson(res, 200, {
+            user: publicUser(target),
+            records: await getRecords(targetId, 400),
+          });
+        }
+        if (!adminUserMatch[2] && method === 'DELETE') {
+          if (targetId === user.id) return sendError(res, 400, '不能删除当前登录的管理员账号');
+          if (target.is_admin && (await db.countAdmins()) <= 1) {
+            return sendError(res, 409, '至少需要保留一个管理员');
+          }
+          await db.addAdminAction({
+            adminId: user.id,
+            targetUserId: targetId,
+            action: 'delete_user',
+            details: `删除用户 ${target.username}`,
+            createdAt: nowIso(),
+          });
+          await db.deleteUser(targetId);
+          return sendJson(res, 200, { ok: true });
+        }
+        if (!adminUserMatch[2] && method === 'PATCH') {
+          const body = await readBody(req);
+          const isAdmin = Boolean(body.isAdmin);
+          if (targetId === user.id && !isAdmin) return sendError(res, 400, '不能取消自己的管理员权限');
+          if (target.is_admin && !isAdmin && (await db.countAdmins()) <= 1) {
+            return sendError(res, 409, '至少需要保留一个管理员');
+          }
+          const updated = await db.setAdmin(targetId, isAdmin);
+          await db.addAdminAction({
+            adminId: user.id,
+            targetUserId: targetId,
+            action: isAdmin ? 'grant_admin' : 'revoke_admin',
+            details: `${isAdmin ? '授予' : '取消'} ${target.username} 的管理员权限`,
+            createdAt: nowIso(),
+          });
+          return sendJson(res, 200, { user: publicUser(updated) });
+        }
+      }
+
+      const adminRecordMatch = pathname.match(/^\/api\/admin\/records\/(\d+)$/);
+      if (adminRecordMatch && method === 'DELETE') {
+        if (!requireAdmin(user, res)) return;
+        const recordId = Number(adminRecordMatch[1]);
+        const record = await db.getRecordById(recordId);
+        if (!record) return sendError(res, 404, '记录不存在');
+        const target = await db.findUserById(record.user_id);
+        await db.addAdminAction({
+          adminId: user.id,
+          targetUserId: record.user_id,
+          action: 'delete_record',
+          details: `删除 ${target?.username || record.user_id} 的记录 ${record.local_date}`,
+          createdAt: nowIso(),
+        });
+        await db.deleteRecordById(recordId);
+        return sendJson(res, 200, { ok: true });
       }
 
       if (pathname === '/api/records' && method === 'GET') {

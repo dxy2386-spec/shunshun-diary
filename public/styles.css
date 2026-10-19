@@ -2003,6 +2003,200 @@ textarea:focus {
   letter-spacing: 0.04em;
 }
 
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.admin-warning {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--peach-soft);
+  color: #8a5a3b;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.admin-users {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.admin-user-card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.admin-user-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-user-avatar {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  background: var(--green-soft);
+  color: var(--green-deep);
+  font-family: var(--serif);
+  font-size: 17px;
+  flex: none;
+}
+
+.admin-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-user-info strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-user-info small {
+  display: block;
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-badge {
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--green);
+  color: var(--cream);
+  font-size: 8px;
+  flex: none;
+}
+
+.admin-user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 11px;
+}
+
+.admin-action-btn {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.admin-action-btn:hover {
+  border-color: rgba(47, 107, 79, 0.35);
+  color: var(--green);
+}
+
+.admin-action-btn.danger {
+  color: var(--danger);
+  border-color: rgba(173, 74, 61, 0.2);
+  background: var(--danger-soft);
+}
+
+.admin-records {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.admin-record-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(231, 222, 205, 0.6);
+  font-size: 10px;
+}
+
+.admin-record-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-record-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-record-main strong {
+  font-weight: 600;
+}
+
+.admin-record-main span {
+  display: block;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+.admin-record-delete {
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+  font-size: 9px;
+  padding: 4px;
+}
+
+.admin-empty,
+.admin-loading {
+  padding: 18px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 14px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.admin-actions {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.admin-action-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 10px;
+}
+
+.admin-action-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-action-row time {
+  color: var(--muted);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.admin-action-copy {
+  flex: 1;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
 /* ---------- nav ---------- */
 
 .bottom-nav {
