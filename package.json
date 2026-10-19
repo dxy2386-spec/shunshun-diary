@@ -1,0 +1,22 @@
+{
+  "name": "shunshun-diary",
+  "version": "1.0.0",
+  "private": true,
+  "description": "顺顺日记 - 排便记录与肠道健康助手",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "dev": "node --watch --env-file-if-exists=.env server.mjs",
+    "migrate": "node --env-file-if-exists=.env migrate-to-postgres.mjs",
+    "test": "node test-postgres.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.16.0"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "pg-mem": "^3.0.14"
+  }
+}

@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#2f6b4f" />
+    <meta name="description" content="顺顺日记：温和记录每一次排便，观察肠道趋势，获得日常调理建议。" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="顺顺" />
+    <title>顺顺日记 · 肠道健康手账</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <symbol id="i-leaf" viewBox="0 0 24 24">
+        <path d="M20 4c-7.5-.4-12.6 2.5-14.2 7.2C4.4 15.5 6.6 19 10.3 19c5 0 8.2-4.7 9.7-15Z" />
+        <path d="M4 21c1.5-5 4.6-8.6 9.2-11" />
+      </symbol>
+      <symbol id="i-home" viewBox="0 0 24 24">
+        <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-9.5Z" />
+      </symbol>
+      <symbol id="i-calendar" viewBox="0 0 24 24">
+        <rect x="3.5" y="5" width="17" height="16" rx="3" />
+        <path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M14 14h2M8 17.5h2M14 17.5h2" />
+      </symbol>
+      <symbol id="i-spark" viewBox="0 0 24 24">
+        <path d="M12 3.5c.5 4.6 2.9 7 7.5 7.5-4.6.5-7 2.9-7.5 7.5-.5-4.6-2.9-7-7.5-7.5 4.6-.5 7-2.9 7.5-7.5Z" />
+        <path d="M18.5 16.5c.2 1.9 1.1 2.8 3 3-1.9.2-2.8 1.1-3 3-.2-1.9-1.1-2.8-3-3 1.9-.2 2.8-1.1 3-3Z" />
+      </symbol>
+      <symbol id="i-user" viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4.5 21c.7-4 3.6-6 7.5-6s6.8 2 7.5 6" />
+      </symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24">
+        <path d="M12 5v14M5 12h14" />
+      </symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M12 7.5V12l3 2" />
+      </symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24">
+        <path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z" />
+        <path d="m13.8 6.2 4 4" />
+      </symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24">
+        <path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5" />
+      </symbol>
+      <symbol id="i-download" viewBox="0 0 24 24">
+        <path d="M12 3v12M7 10.5l5 5 5-5M4 20.5h16" />
+      </symbol>
+      <symbol id="i-logout" viewBox="0 0 24 24">
+        <path d="M14 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8M10 12h11M17 8l4 4-4 4" />
+      </symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24">
+        <path d="M12 3c2.6 2 5.2 3 8 3v6c0 4.4-3 7.7-8 9-5-1.3-8-4.6-8-9V6c2.8 0 5.4-1 8-3Z" />
+        <path d="m8.5 12 2.3 2.3 4.7-4.6" />
+      </symbol>
+      <symbol id="i-send" viewBox="0 0 24 24">
+        <path d="m4 11.5 16-7-4.5 16-3.5-6.5L4 11.5Z" />
+        <path d="m12 14 8-9.5" />
+      </symbol>
+      <symbol id="i-close" viewBox="0 0 24 24">
+        <path d="M6 6l12 12M18 6 6 18" />
+      </symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24">
+        <rect x="5" y="10" width="14" height="11" rx="3" />
+        <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+      </symbol>
+      <symbol id="i-mail" viewBox="0 0 24 24">
+        <rect x="3" y="5" width="18" height="14" rx="3" />
+        <path d="m4 7 8 6 8-6" />
+      </symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24">
+        <path d="M4 20V4M4 20h16M8 16v-4M12.5 16V8M17 16v-6" />
+      </symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24">
+        <path d="m9 5 7 7-7 7" />
+      </symbol>
+      <symbol id="i-info" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 10.5V17M12 7.5v.5" />
+      </symbol>
+      <symbol id="i-drop" viewBox="0 0 24 24">
+        <path d="M12 3c3 4.2 6 7.2 6 10.5a6 6 0 0 1-12 0C6 10.2 9 7.2 12 3Z" />
+      </symbol>
+      <symbol id="i-wifi" viewBox="0 0 24 24">
+        <path d="M3.5 9.5a13 13 0 0 1 17 0M6.5 13a8.5 8.5 0 0 1 11 0M9.5 16.3a4 4 0 0 1 5 0" />
+        <circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none" />
+      </symbol>
+    </svg>
+
+    <main id="auth-view" class="auth" hidden>
+      <section class="auth-brand">
+        <div class="auth-brand-top">
+          <div class="brand-mark"><svg class="icon"><use href="#i-leaf"></use></svg></div>
+          <span class="brand-name">顺顺日记</span>
+        </div>
+        <div class="auth-copy">
+          <p class="eyebrow light">A GENTLE BODY JOURNAL</p>
+          <h1>把每一次顺畅，<br />记成身体的回声。</h1>
+          <p class="auth-sub">记录形态、颜色和感受，让肠道的小变化有迹可循。AI 助手会陪你一起看懂它。</p>
+        </div>
+        <div class="auth-features">
+          <div class="auth-feature">
+            <span>01</span>
+            <div><strong>10 秒记录</strong><p>时间、形态、颜色与感受，一页完成。</p></div>
+          </div>
+          <div class="auth-feature">
+            <span>02</span>
+            <div><strong>看见趋势</strong><p>用周视图和形态分布，发现自己的生活规律。</p></div>
+          </div>
+          <div class="auth-feature">
+            <span>03</span>
+            <div><strong>温和建议</strong><p>基于记录给出饮食与习惯建议，不替代医生。</p></div>
+          </div>
+        </div>
+        <p class="auth-footnote">你的健康数据属于你 · 可随时导出或删除</p>
+        <div class="auth-orbit orbit-a"></div>
+        <div class="auth-orbit orbit-b"></div>
+      </section>
+
+      <section class="auth-panel">
+        <div class="auth-card">
+          <div class="auth-mobile-brand">
+            <div class="brand-mark"><svg class="icon"><use href="#i-leaf"></use></svg></div>
+            <div><span class="brand-name">顺顺日记</span><p>肠道健康手账</p></div>
+          </div>
+          <div class="auth-tabs" role="tablist">
+            <button type="button" class="auth-tab is-active" data-auth-tab="login" role="tab">登录</button>
+            <button type="button" class="auth-tab" data-auth-tab="register" role="tab">注册</button>
+          </div>
+
+          <form id="login-form" class="auth-form" novalidate>
+            <label class="field">
+              <span class="field-label">邮箱</span>
+              <span class="input-wrap">
+                <svg class="icon"><use href="#i-mail"></use></svg>
+                <input name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+              </span>
+            </label>
+            <label class="field">
+              <span class="field-label">密码</span>
+              <span class="input-wrap">
+                <svg class="icon"><use href="#i-lock"></use></svg>
+                <input name="password" type="password" autocomplete="current-password" placeholder="输入密码" required />
+              </span>
+            </label>
+            <p class="form-error" data-error-for="login" role="alert"></p>
+            <button class="btn btn-primary btn-wide" type="submit">进入我的日记</button>
+          </form>
+
+          <form id="register-form" class="auth-form" novalidate hidden>
+            <label class="field">
+              <span class="field-label">怎么称呼你</span>
+              <span class="input-wrap">
+                <svg class="icon"><use href="#i-user"></use></svg>
+                <input name="nickname" type="text" autocomplete="nickname" maxlength="24" placeholder="例如：小顺" required />
+              </span>
+            </label>
+            <label class="field">
+              <span class="field-label">邮箱</span>
+              <span class="input-wrap">
+                <svg class="icon"><use href="#i-mail"></use></svg>
+                <input name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+              </span>
+            </label>
+            <label class="field">
+              <span class="field-label">密码</span>
+              <span class="input-wrap">
+                <svg class="icon"><use href="#i-lock"></use></svg>
+                <input name="password" type="password" autocomplete="new-password" minlength="8" placeholder="至少 8 位" required />
+              </span>
+            </label>
+            <label class="consent">
+              <input name="consent" type="checkbox" required />
+              <span>我同意将健康记录保存在此服务中，并理解分析建议不构成医疗诊断。</span>
+            </label>
+            <p class="form-error" data-error-for="register" role="alert"></p>
+            <button class="btn btn-primary btn-wide" type="submit">创建账号</button>
+          </form>
+
+          <div class="auth-divider" id="auth-divider"><span>或者</span></div>
+          <button id="demo-login" class="btn btn-ghost btn-wide" type="button">
+            用体验账号看看
+            <span class="demo-hint">demo@shunshun.app</span>
+          </button>
+          <p class="auth-privacy">
+            <svg class="icon"><use href="#i-shield"></use></svg>
+            健康数据仅用于本服务，不对外公开；可随时导出或删除。
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <div id="app-view" class="app-shell" hidden>
+      <header class="app-header">
+        <a class="app-brand" href="#/today" aria-label="顺顺日记首页">
+          <span class="brand-mark small"><svg class="icon"><use href="#i-leaf"></use></svg></span>
+          <span class="brand-text">顺顺<em>日记</em></span>
+        </a>
+        <div class="header-right">
+          <span id="today-pill" class="date-pill"></span>
+          <button class="avatar-btn" id="header-avatar" type="button" aria-label="我的账号"></button>
+        </div>
+      </header>
+
+      <section id="view-today" class="view" data-view="today">
+        <div class="greeting">
+          <p id="greeting-text" class="greeting-text">早上好</p>
+          <h1 class="page-title">今天，顺不顺？</h1>
+        </div>
+
+        <section class="hero-card">
+          <div class="hero-glow"></div>
+          <div class="hero-head">
+            <span class="hero-eyebrow">TODAY'S RHYTHM</span>
+            <span class="hero-date" id="hero-date"></span>
+          </div>
+          <div class="hero-body">
+            <div class="hero-number-wrap">
+              <div class="hero-number"><span id="today-count">0</span><em>次</em></div>
+              <p class="hero-label" id="hero-label">今天还没有记录</p>
+            </div>
+            <div class="hero-stamp" aria-hidden="true">
+              <svg viewBox="0 0 100 100" class="stamp-ring">
+                <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="2 5" />
+              </svg>
+              <span id="hero-stamp-text">慢慢来</span>
+            </div>
+          </div>
+          <div class="hero-chart" id="hero-chart" aria-label="最近七天记录次数"></div>
+        </section>
+
+        <div class="quick-stats" id="quick-stats"></div>
+
+        <section class="section">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">TODAY</p>
+              <h2>今天的记录</h2>
+            </div>
+            <button class="text-btn" type="button" data-open-record>
+              <svg class="icon"><use href="#i-plus"></use></svg>记一次
+            </button>
+          </div>
+          <div id="today-records" class="record-list"></div>
+          <button class="ai-nudge" id="today-ai" type="button">
+            <span class="ai-nudge-orb"><svg class="icon"><use href="#i-spark"></use></svg></span>
+            <span class="ai-nudge-copy">
+              <strong>让顺顺看看今天</strong>
+              <small>结合今天的形态、颜色和感受，给一点调理建议</small>
+            </span>
+            <svg class="icon chevron"><use href="#i-chevron"></use></svg>
+          </button>
+        </section>
+
+        <section class="tip-card" id="tip-card">
+          <div class="tip-icon"><svg class="icon"><use href="#i-drop"></use></svg></div>
+          <div class="tip-copy">
+            <p class="eyebrow">今日小贴士</p>
+            <p id="tip-text"></p>
+          </div>
+        </section>
+      </section>
+
+      <section id="view-history" class="view" data-view="history" hidden>
+        <div class="greeting">
+          <p class="greeting-text">身体的规律，藏在日常里</p>
+          <h1 class="page-title">回看趋势</h1>
+        </div>
+
+        <div class="stat-grid" id="stat-grid"></div>
+
+        <section class="card chart-card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">LAST 14 DAYS</p>
+              <h2>最近两周</h2>
+            </div>
+            <span class="chart-legend"><i></i>记录次数</span>
+          </div>
+          <div class="bar-chart" id="bar-chart"></div>
+        </section>
+
+        <div class="segmented" id="history-filter" role="tablist">
+          <button class="seg is-active" data-filter="7" type="button">近 7 天</button>
+          <button class="seg" data-filter="30" type="button">近 30 天</button>
+          <button class="seg" data-filter="all" type="button">全部</button>
+        </div>
+
+        <section class="section">
+          <div class="section-head compact">
+            <h2>记录明细</h2>
+            <span class="muted-count" id="history-count"></span>
+          </div>
+          <div id="history-list" class="history-list"></div>
+        </section>
+      </section>
+
+      <section id="view-assistant" class="view assistant-view" data-view="assistant" hidden>
+        <div class="assistant-head">
+          <div>
+            <p class="eyebrow">GUT COMPANION</p>
+            <h1 class="page-title">肠道小助手</h1>
+          </div>
+          <span class="ai-badge" id="ai-badge"><i></i><span>本地分析</span></span>
+        </div>
+        <p class="assistant-sub">结合你的记录，聊聊形态、饮食和如厕习惯。</p>
+
+        <div class="disclaimer-strip">
+          <svg class="icon"><use href="#i-info"></use></svg>
+          <span>健康科普建议，不构成诊断。出现便血、黑便或剧烈腹痛请及时就医。</span>
+        </div>
+
+        <div id="chat-stream" class="chat-stream" aria-live="polite"></div>
+
+        <div class="chat-quick" id="chat-quick">
+          <button type="button" data-prompt="分析一下我最近一周的记录">分析最近一周</button>
+          <button type="button" data-prompt="最近有点便秘，怎么调理？">便秘怎么调理</button>
+          <button type="button" data-prompt="便便颜色偏绿要紧吗？">颜色怎么看</button>
+          <button type="button" data-prompt="想让排便更规律，饮食上怎么吃？">饮食怎么搭</button>
+        </div>
+
+        <form id="chat-form" class="chat-composer">
+          <textarea id="chat-input" rows="1" maxlength="1000" placeholder="说说今天的情况，或问一个健康问题…"></textarea>
+          <button class="send-btn" type="submit" aria-label="发送">
+            <svg class="icon"><use href="#i-send"></use></svg>
+          </button>
+        </form>
+      </section>
+
+      <section id="view-me" class="view" data-view="me" hidden>
+        <div class="greeting">
+          <p class="greeting-text">属于你的健康档案</p>
+          <h1 class="page-title">我的</h1>
+        </div>
+
+        <section class="profile-card">
+          <div class="profile-avatar" id="profile-avatar"></div>
+          <div class="profile-info">
+            <h2 id="profile-name"></h2>
+            <p id="profile-email"></p>
+            <span id="profile-since"></span>
+          </div>
+          <button class="icon-btn" type="button" data-view-link="history" aria-label="查看趋势">
+            <svg class="icon"><use href="#i-chevron"></use></svg>
+          </button>
+        </section>
+
+        <div class="profile-stats" id="profile-stats"></div>
+
+        <section class="settings-card">
+          <button type="button" id="export-btn" class="setting-row">
+            <span class="setting-icon"><svg class="icon"><use href="#i-download"></use></svg></span>
+            <span class="setting-copy"><strong>导出我的记录</strong><small>CSV 格式，可用 Excel 打开</small></span>
+            <svg class="icon chevron"><use href="#i-chevron"></use></svg>
+          </button>
+          <button type="button" id="clear-chat-btn" class="setting-row">
+            <span class="setting-icon"><svg class="icon"><use href="#i-spark"></use></svg></span>
+            <span class="setting-copy"><strong>清空助手对话</strong><small>记录不会被删除</small></span>
+            <svg class="icon chevron"><use href="#i-chevron"></use></svg>
+          </button>
+          <button type="button" id="logout-btn" class="setting-row">
+            <span class="setting-icon"><svg class="icon"><use href="#i-logout"></use></svg></span>
+            <span class="setting-copy"><strong>退出登录</strong><small>下次需要重新输入密码</small></span>
+            <svg class="icon chevron"><use href="#i-chevron"></use></svg>
+          </button>
+        </section>
+
+        <section class="share-card">
+          <div class="share-head">
+            <span class="setting-icon"><svg class="icon"><use href="#i-wifi"></use></svg></span>
+            <div><strong id="share-title">局域网共享</strong><small id="share-hint">同一 Wi-Fi 下的朋友可以打开这个地址</small></div>
+          </div>
+          <div class="share-url">
+            <code id="lan-url">正在获取地址…</code>
+            <button id="copy-lan-btn" type="button">复制</button>
+          </div>
+          <p>对方需要自己注册账号，记录彼此独立。不要把真实记录记在公共体验账号里。</p>
+        </section>
+
+        <section class="about-card">
+          <div class="about-head"><svg class="icon"><use href="#i-shield"></use></svg><h2>关于健康数据</h2></div>
+          <p>顺顺日记用于日常自我观察，不能替代医生的诊断与治疗。你的记录只属于你，AI 分析仅发送必要的记录摘要，不包含账号信息。</p>
+          <p class="about-note">如果出现便血、黑便、灰白便、持续腹痛、发热或体重明显下降，请尽快就医。</p>
+        </section>
+
+        <button id="delete-account-btn" class="danger-link" type="button">删除账号与全部数据</button>
+        <p class="version">顺顺日记 v1.0 · 认真记录，轻松生活</p>
+      </section>
+
+      <nav class="bottom-nav" aria-label="主导航">
+        <a href="#/today" data-nav="today" class="nav-item is-active">
+          <svg class="icon"><use href="#i-home"></use></svg><span>今日</span>
+        </a>
+        <a href="#/history" data-nav="history" class="nav-item">
+          <svg class="icon"><use href="#i-calendar"></use></svg><span>趋势</span>
+        </a>
+        <button type="button" class="nav-fab" data-open-record aria-label="记录一次">
+          <svg class="icon"><use href="#i-plus"></use></svg>
+        </button>
+        <a href="#/assistant" data-nav="assistant" class="nav-item">
+          <svg class="icon"><use href="#i-spark"></use></svg><span>助手</span>
+        </a>
+        <a href="#/me" data-nav="me" class="nav-item">
+          <svg class="icon"><use href="#i-user"></use></svg><span>我的</span>
+        </a>
+      </nav>
+    </div>
+
+    <dialog id="record-dialog" class="sheet-dialog">
+      <form id="record-form" class="sheet" novalidate>
+        <div class="sheet-handle"></div>
+        <div class="sheet-head">
+          <div>
+            <p class="eyebrow">NEW ENTRY</p>
+            <h2 id="record-title">记录这一次</h2>
+          </div>
+          <button type="button" class="icon-btn" data-close-record aria-label="关闭">
+            <svg class="icon"><use href="#i-close"></use></svg>
+          </button>
+        </div>
+
+        <div class="sheet-body">
+          <label class="field">
+            <span class="field-label">时间</span>
+            <span class="input-wrap">
+              <svg class="icon"><use href="#i-clock"></use></svg>
+              <input id="record-time" name="occurredAt" type="datetime-local" required />
+            </span>
+          </label>
+
+          <fieldset class="choice-group">
+            <legend class="field-label">形态 <span>Bristol 分类</span></legend>
+            <div class="bristol-grid" id="bristol-grid"></div>
+            <p class="choice-hint" id="bristol-hint">选一个最接近的样子，3–4 型通常是理想状态。</p>
+          </fieldset>
+
+          <fieldset class="choice-group">
+            <legend class="field-label">颜色</legend>
+            <div class="color-grid" id="color-grid"></div>
+            <p class="choice-warning" id="color-warning" hidden></p>
+          </fieldset>
+
+          <div class="choice-row">
+            <fieldset class="choice-group">
+              <legend class="field-label">量</legend>
+              <div class="segmented small" id="amount-grid">
+                <button class="seg" type="button" data-amount="small">偏少</button>
+                <button class="seg is-active" type="button" data-amount="medium">适中</button>
+                <button class="seg" type="button" data-amount="large">偏多</button>
+              </div>
+            </fieldset>
+          </div>
+
+          <fieldset class="choice-group">
+            <legend class="field-label">排便感受</legend>
+            <div class="segmented small four" id="ease-grid">
+              <button class="seg" type="button" data-ease="easy">顺畅</button>
+              <button class="seg is-active" type="button" data-ease="normal">正常</button>
+              <button class="seg" type="button" data-ease="strained">费力</button>
+              <button class="seg" type="button" data-ease="urgent">急迫</button>
+            </div>
+          </fieldset>
+
+          <label class="field">
+            <span class="field-label">备注 <span>可选</span></span>
+            <textarea id="record-notes" name="notes" rows="3" maxlength="500" placeholder="今天吃了什么、有没有腹痛、睡眠怎么样…"></textarea>
+          </label>
+          <p class="form-error" data-error-for="record" role="alert"></p>
+        </div>
+
+        <div class="sheet-foot">
+          <button type="button" class="btn btn-danger-ghost" id="delete-record-btn" hidden>删除</button>
+          <button type="submit" class="btn btn-primary grow">保存记录</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="confirm-dialog" class="confirm-dialog">
+      <form class="confirm-card" id="confirm-form">
+        <h2 id="confirm-title">确认操作</h2>
+        <p id="confirm-text"></p>
+        <label class="field" id="confirm-password-field" hidden>
+          <span class="field-label">输入密码确认</span>
+          <span class="input-wrap">
+            <svg class="icon"><use href="#i-lock"></use></svg>
+            <input id="confirm-password" type="password" autocomplete="current-password" placeholder="账号密码" />
+          </span>
+        </label>
+        <p class="form-error" data-error-for="confirm" role="alert"></p>
+        <div class="confirm-actions">
+          <button type="button" class="btn btn-ghost" id="confirm-cancel">取消</button>
+          <button type="submit" class="btn btn-danger" id="confirm-ok">确认</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="splash" class="splash">
+      <div class="brand-mark large"><svg class="icon"><use href="#i-leaf"></use></svg></div>
+      <p>顺顺日记</p>
+    </div>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
